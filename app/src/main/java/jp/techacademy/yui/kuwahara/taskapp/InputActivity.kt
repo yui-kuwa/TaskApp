@@ -12,6 +12,10 @@ import java.util.*
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.widget.ArrayAdapter
+import io.realm.RealmChangeListener
+import kotlinx.android.synthetic.main.activity_main.*
+import android.text.Selection.setSelection
 
 class InputActivity : AppCompatActivity() {
     //タスクの日時を保持する変数
@@ -23,6 +27,9 @@ class InputActivity : AppCompatActivity() {
 
     //Taskクラスのオブジェクト
     private var mTask: Task? = null
+    private var mCategory: Category? = null
+
+    private lateinit var mRealm: Realm//Realmクラスを保持するmRealmを定義
 
     //日付を設定するButtonのリスナー
     private val mOnDateClickListener = View.OnClickListener {
@@ -51,6 +58,17 @@ class InputActivity : AppCompatActivity() {
         timePickerDialog.show()
     }
 
+    // 新規カテゴリー作成ボタンをタップしたときの処理
+    private val mOnAddCategoryClickListener = View.OnClickListener {
+        // カテゴリー作成画面に遷移させる
+        //選んだタスクをinputActivityに渡すためのIntentを作成
+        val intent = Intent(this, InputCategoryActivity::class.java)
+        //Intentを渡す
+        //intent.putExtra(EXTRA_TASK, intent)
+        //InputActivityでタスクを表示
+        startActivity(intent)
+    }
+
     //決定Buttonのリスナー
     private val mOnDoneClickListener = View.OnClickListener {
         addTask()//Realmに保存/更新
@@ -71,15 +89,16 @@ class InputActivity : AppCompatActivity() {
         // UI部品の設定
         date_button.setOnClickListener(mOnDateClickListener)
         times_button.setOnClickListener(mOnTimeClickListener)
+        add_category_button.setOnClickListener(mOnAddCategoryClickListener)
         done_button.setOnClickListener(mOnDoneClickListener)
 
         // EXTRA_TASKからTaskのidを取得して、 idからTaskのインスタンスを取得する
         val intent = intent
         //Taskのidを取り出し、もしEXTRA_TASKが設定されていないと taskId には第二引数で指定している既定値 -1 が代入される
         val taskId = intent.getIntExtra(EXTRA_TASK, -1)
-        val realm = Realm.getDefaultInstance()
-        mTask = realm.where(Task::class.java).equalTo("id", taskId).findFirst()
-        realm.close()
+        mRealm = Realm.getDefaultInstance()
+        mTask = mRealm.where(Task::class.java).equalTo("id", taskId).findFirst()
+        mRealm.close()
 
         if (mTask == null) {
             // 新規作成の場合
@@ -93,7 +112,6 @@ class InputActivity : AppCompatActivity() {
             // 更新の場合
             title_edit_text.setText(mTask!!.title)
             content_edit_text.setText(mTask!!.contents)
-            category_edit_text.setText(mTask!!.category)
 
             val calendar = Calendar.getInstance()
             calendar.time = mTask!!.date
@@ -108,6 +126,32 @@ class InputActivity : AppCompatActivity() {
 
             date_button.text = dateString
             times_button.text = timeString
+
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        val categoryList = mutableListOf<String>()//String型の配列を作成
+        val categoryRealmResults = mRealm.where(Category::class.java).findAll()//Realmにあるデータを取る
+
+        categoryRealmResults.forEach{ category ->//forEachで配列がある分繰り返す
+            categoryList.add(category.category)//配列にcategory classのcategoryを追加
+        }
+
+        //アダプターを設定
+        val adapter = ArrayAdapter<String>(
+            this,
+            android.R.layout.simple_spinner_item,
+            categoryList
+        )
+
+        //category spinnerのアダプターにadapterをいれる
+        category_spinner.adapter = adapter
+
+        if(mTask != null) {
+            category_spinner.setSelection(mTask!!.category!!.id, false)
         }
     }
 
@@ -133,7 +177,7 @@ class InputActivity : AppCompatActivity() {
 
         val title = title_edit_text.text.toString()
         val content = content_edit_text.text.toString()
-        val category = category_edit_text.text.toString()
+        val category = category_spinner.selectedItem.toString()
 
         //タイトル、内容、日時、カテゴリーをmTaskに設定
         mTask!!.title = title
@@ -141,7 +185,9 @@ class InputActivity : AppCompatActivity() {
         val calendar = GregorianCalendar(mYear, mMonth, mDay, mHour, mMinute)
         val date = calendar.time
         mTask!!.date = date
-        mTask!!.category = category
+
+        //mTaskクラスのcategoryにカテゴリークラスのcategoryとスピナーで選択してるカテゴリーが同じものを入れる
+        mTask!!.category = mRealm.where(Category::class.java).equalTo("category",category).findFirst()
 
         //データの保存・更新
         //設定したものをデータベースに保存

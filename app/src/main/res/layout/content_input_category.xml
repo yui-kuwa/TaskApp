@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="16dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="16dp"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context=".InputCategoryActivity"
+    tools:showIn="@layout/activity_input_category">
+
+    <EditText
+        android:id="@+id/category_edit_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="作成したいカテゴリーを入力してください" />
+
+    <Button
+        android:id="@+id/done_category_button"
+        android:layout_width="96dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/category_edit_text"
+        android:layout_alignParentRight="true"
+        android:text="追加" />
+
+</RelativeLayout>
